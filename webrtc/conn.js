@@ -45,7 +45,7 @@ function connToHost() {
 
 	logElem = document.getElementById("log");
 	logElem.innerHTML = "";
-	if (connPort > 0 && ipregex.matches(connHost)) {
+	if (connPort > 0 && ipregex.test(connHost)) {
 		log(`Connecting to ${connHost}:${connPort} ...`);
 		try {
 			connect(connHost, connPort, log);
