@@ -1,6 +1,7 @@
 var logElem = null;
 const ipregex = /^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$/gm;
-const base64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+const base64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const fingerprintregex = /^(?:[A-F0-9]{2}:){31}[A-F0-9]{2}$/gm;
 
 function log(message) {
 	if (logElem) {
@@ -22,7 +23,7 @@ function randomBase64String(length) {
 	return res;
 }
 
-function fakeAnswer(connHost, connPort) {
+function fakeAnswer(connHost, connPort, connFingerprint) {
 	let sdp = "v=0\r\n";
 	let sessId = String(Math.floor(Math.random() * 9) + 1);
 	for (let i = 0; i < 20; ++ i) {
@@ -30,7 +31,7 @@ function fakeAnswer(connHost, connPort) {
 	}
 	sdp += `o=- ${sessId} 0 IN IP4 0.0.0.0\r\n`;
 	sdp += `s=-\r\nt=0 0\r\na=sendrecv\r\n`;
-	// ToDo: a=fingerprint
+	sdp += `a=fingerprint:sha-256 ${connFingerprint}\r\n`;
 	sdp += "a=group:BUNDLE 0\r\na=msid-semantic:WMS *\r\n";
 	sdp += `m=application ${connPort} UDP/DTLS/SCTP webrtc-datachannel\r\n`
 	sdp += `c=IN IP4 ${connHost}\r\n`
@@ -50,7 +51,7 @@ function fakeAnswer(connHost, connPort) {
 	};
 }
 
-function connect(connHost, connPort) {
+function connect(connHost, connPort, connFingerprint) {
 	let conn = new RTCPeerConnection();
 	log("Created connection");
 	let dataChannel = conn.createDataChannel("chat");
@@ -59,7 +60,7 @@ function connect(connHost, connPort) {
 		log("Created offer");
 		conn.setLocalDescription(offer).then(function(_) {
 			log("Set offer");
-			conn.setRemoteDescription(fakeAnswer(connHost, connPort)).then(function(_) {
+			conn.setRemoteDescription(fakeAnswer(connHost, connPort, connFingerprint)).then(function(_) {
 				log("Set answer");
 			}).catch(function(reason) {
 				logErr(`Cannot set answer: ${reason}`);
@@ -77,13 +78,14 @@ function connToHost() {
 
 	let connHost = String(document.forms["conn-form"].elements["conn-host"].value);
 	let connPort = Number(document.forms["conn-form"].elements["conn-port"].value);
+	let connFingerprint = String(document.forms["conn-form"].elements["conn-fingerprint"].value);
 
 	logElem = document.getElementById("log");
 	logElem.innerHTML = "";
-	if (connPort > 0 && ipregex.test(connHost)) {
+	if (connPort > 0 && ipregex.test(connHost) && fingerprintregex.test(connFingerprint)) {
 		log(`Connecting to ${connHost}:${connPort} ...`);
 		try {
-			connect(connHost, connPort, log);
+			connect(connHost, connPort, connFingerprint);
 		} catch (reason) {
 			logErr(`Connection error: ${reason}`);
 		}
