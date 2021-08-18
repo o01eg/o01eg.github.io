@@ -1,10 +1,25 @@
 var logElem = null;
 const ipregex = /^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$/gm;
+const base64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 function log(message) {
 	if (logElem) {
 		logElem.innerHTML += message + '<br/>';
 	}
+}
+
+function logErr(message) {
+	if (logElem) {
+		logElem.innerHTML += '<span class="error">' + message + '</span><br/>';
+	}
+}
+
+function randomBase64String(length) {
+	let res = "";
+	for (let i = 0; i < length; ++ i) {
+		res += base64[Math.floor(Math.random() * base64.length)];
+	}
+	return res;
 }
 
 function fakeAnswer(connHost, connPort) {
@@ -21,8 +36,13 @@ function fakeAnswer(connHost, connPort) {
 	sdp += `c=IN IP4 ${connHost}\r\n`
 	sdp += `a=candidate:0 1 UDP 99999999 ${connHost} ${connPort} typ host\r\n`
 	sdp += `a=sendrecv\r\na=end-of-candidates\r\n`
-	// ToDo: a=ice-pwd,ice-ufrag
+	icePwd = randomBase64String(22);
+	sdp += `a=ice-pwd: ${icePwd}\r\n`
+	iceUfrag = randomBase64String(4);
+	sdp += `a=ice-ufrag: ${iceUfrag}\r\n`
 	sdp += `a=mid:0\r\na=setup:active\r\na=sctp-port:5000\r\na=max-message-size:262144\r\n`
+
+	console.log(sdp);
 
 	return {
 		type: "answer",
@@ -42,13 +62,13 @@ function connect(connHost, connPort) {
 			conn.setRemoteDescription(fakeAnswer(connHost, connPort)).then(function(_) {
 				log("Set answer");
 			}).catch(function(reason) {
-				log(`Cannot set answer: ${reason}`);
+				logErr(`Cannot set answer: ${reason}`);
 			});
 		}).catch(function(reason) {
-			log(`Cannot set offer: ${reason}`);
+			logErr(`Cannot set offer: ${reason}`);
 		});
 	}).catch(function(reason) {
-		log(`Cannot create offer: ${reason}`);
+		logErr(`Cannot create offer: ${reason}`);
 	});
 }
 
@@ -65,10 +85,10 @@ function connToHost() {
 		try {
 			connect(connHost, connPort, log);
 		} catch (reason) {
-			log(`Connection error: ${reason}`);
+			logErr(`Connection error: ${reason}`);
 		}
 	} else {
-		log("Incorrect host and port");
+		logErr("Incorrect host and port");
 	}
 	return false;
 }
