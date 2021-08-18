@@ -9,6 +9,15 @@ function log(message) {
 
 function fakeAnswer(connHost, connPort) {
 	let sdp = "v=0\r\n";
+	let sessId = String(Math.floor(Math.random() * 9) + 1);
+	for (let i = 0; i < 20; ++ i) {
+		sessId = String(Math.floor(Math.random() * 10));
+	}
+	sdp += `o=- ${sessId} 0 IN IP4 0.0.0.0\r\n`;
+	sdp += `s=-\r\nt=0 0\r\na=sendrecv\r\n`;
+	// ToDo: a=fingerprint
+	sdp += "a=group:BUNDLE 0\r\na=msid-semantic:WMS *\r\n";
+	sdp += `m=application ${connPort} UDP/DTLS/SCTP webrtc-datachannel\r\n`
 	return {
 		type: "answer",
 		sdp
