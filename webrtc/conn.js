@@ -6,6 +6,14 @@ function log(message) {
 	}
 }
 
+function fakeAnswer(connHost, connPort) {
+	let sdp = "";
+	return {
+		type: "answer",
+		sdp
+	};
+}
+
 function connect(connHost, connPort) {
 	let conn = new RTCPeerConnection();
 	log("Created connection");
@@ -19,6 +27,11 @@ function connect(connHost, connPort) {
 			log(`Cannot set offer: ${reason}`);
 		}).then(function(_) {
 			log("Set offer");
+			conn.setRemoteDescription(fakeAnswer(connHost, connPort)).catch(function(reason) {
+				log(`Cannot set answer: ${reason}`);
+			}).then(function(_) {
+				log("Set answer");
+			});
 		});
 	});
 }
@@ -29,7 +42,8 @@ function connToHost() {
 	let connHost = String(document.forms["conn-form"].elements["conn-host"].value);
 	let connPort = Number(document.forms["conn-form"].elements["conn-port"].value);
 
-	let logElem = document.getElementById("log");
+	logElem = document.getElementById("log");
+	logElem.innerHTML = "";
 	log(`Connecting to ${connHost}:${connPort} ...`);
 	try {
 		connect(connHost, connPort, log);
