@@ -38,9 +38,9 @@ function fakeAnswer(connHost, connPort, connFingerprint) {
 	sdp += `a=candidate:0 1 UDP 99999999 ${connHost} ${connPort} typ host\r\n`
 	sdp += `a=sendrecv\r\na=end-of-candidates\r\n`
 	icePwd = randomBase64String(22);
-	sdp += `a=ice-pwd: ${icePwd}\r\n`
+	sdp += `a=ice-pwd:${icePwd}\r\n`
 	iceUfrag = randomBase64String(4);
-	sdp += `a=ice-ufrag: ${iceUfrag}\r\n`
+	sdp += `a=ice-ufrag:${iceUfrag}\r\n`
 	sdp += `a=mid:0\r\na=setup:active\r\na=sctp-port:5000\r\na=max-message-size:262144\r\n`
 
 	console.log(sdp);
@@ -65,6 +65,9 @@ function fakeCandidate(connHost, connPort, iceUfrag) {
 function connect(connHost, connPort, connFingerprint) {
 	let conn = new RTCPeerConnection();
 	log("Created connection");
+	conn.onconnectionstatechange = function(event) {
+		log(`connectionstatechange: ${conn.connectionState}`);
+	};
 	let dataChannel = conn.createDataChannel("chat");
 	log("Created data channel");
 	conn.createOffer().then(function(offer) {
