@@ -27,7 +27,7 @@ function fakeAnswer(connHost, connPort, connFingerprint) {
 	let sdp = "v=0\r\n";
 	let sessId = String(Math.floor(Math.random() * 9) + 1);
 	for (let i = 0; i < 20; ++ i) {
-		sessId = String(Math.floor(Math.random() * 10));
+		sessId += String(Math.floor(Math.random() * 10));
 	}
 	sdp += `o=- ${sessId} 0 IN IP4 0.0.0.0\r\n`;
 	sdp += `s=-\r\nt=0 0\r\na=sendrecv\r\n`;
@@ -46,8 +46,19 @@ function fakeAnswer(connHost, connPort, connFingerprint) {
 	console.log(sdp);
 
 	return {
-		type: "answer",
-		sdp
+		answer: {
+			type: "answer",
+			sdp
+		},
+		iceUfrag,
+	};
+}
+
+function fakeCandidate(connHost, connPort, iceUfrag) {
+	return {
+		candidate: `candidate:0 1 UDP 99999999 ${connHost} ${connPort} typ host`,
+		sdpMLineIndex: 0,
+		usernameFragment: iceUfrag
 	};
 }
 
@@ -60,8 +71,14 @@ function connect(connHost, connPort, connFingerprint) {
 		log("Created offer");
 		conn.setLocalDescription(offer).then(function(_) {
 			log("Set offer");
-			conn.setRemoteDescription(fakeAnswer(connHost, connPort, connFingerprint)).then(function(_) {
-				log("Set answer");
+			let answer = fakeAnswer(connHost, connPort, connFingerprint);
+			conn.setRemoteDescription(answer.answer).then(function(_) {
+				log("Set fake answer");
+				conn.addIceCandidate(fakeCandidate(connHost, connPort, answer.iceUfrag)).then(function(_) {
+					log("Set fake candidate");
+				}).catch(function(reason) {
+					logErr(`Cannot add fake candidate: ${reason}`);
+				});
 			}).catch(function(reason) {
 				logErr(`Cannot set answer: ${reason}`);
 			});
