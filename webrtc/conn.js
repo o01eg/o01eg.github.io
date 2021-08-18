@@ -26,7 +26,7 @@ function randomBase64String(length) {
 function fakeAnswer(connHost, connPort, connFingerprint) {
 	let sdp = "v=0\r\n";
 	let sessId = String(Math.floor(Math.random() * 9) + 1);
-	for (let i = 0; i < 20; ++ i) {
+	for (let i = 0; i < 16; ++ i) {
 		sessId += String(Math.floor(Math.random() * 10));
 	}
 	sdp += `o=- ${sessId} 0 IN IP4 0.0.0.0\r\n`;
@@ -76,6 +76,11 @@ function connect(connHost, connPort, connFingerprint) {
 				log("Set fake answer");
 				conn.addIceCandidate(fakeCandidate(connHost, connPort, answer.iceUfrag)).then(function(_) {
 					log("Set fake candidate");
+					conn.addIceCandidate().then(function(_) {
+						log("Set fake end of candidates");
+					}).catch(function(reason) {
+						logErr(`Cannot add fake end of candidate: ${reason}`);
+					});
 				}).catch(function(reason) {
 					logErr(`Cannot add fake candidate: ${reason}`);
 				});
