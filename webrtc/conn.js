@@ -18,6 +18,12 @@ function fakeAnswer(connHost, connPort) {
 	// ToDo: a=fingerprint
 	sdp += "a=group:BUNDLE 0\r\na=msid-semantic:WMS *\r\n";
 	sdp += `m=application ${connPort} UDP/DTLS/SCTP webrtc-datachannel\r\n`
+	sdp += `c=IN IP4 ${connHost}\r\n`
+	sdp += `a=candidate:0 1 UDP 99999999 ${connHost} ${connPort} typ host\r\n`
+	sdp += `a=sendrecv\r\na=end-of-candidates\r\n`
+	// ToDo: a=ice-pwd,ice-ufrag
+	sdp += `a=mid:0\r\na=setup:active\r\na=sctp-port:5000\r\na=max-message-size:262144\r\n`
+
 	return {
 		type: "answer",
 		sdp
