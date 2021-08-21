@@ -23,7 +23,10 @@ function randomBase64String(length) {
 	return res;
 }
 
-function fakeAnswer(connHost, connPort, connFingerprint) {
+/*
+ * Uses ICE password from offer so desktop endpoint could use it for ICE STUN confirmation
+ */
+function fakeAnswer(connHost, connPort, connFingerprint, icePwd) {
 	let sdp = "v=0\r\n";
 	let sessId = String(Math.floor(Math.random() * 9) + 1);
 	for (let i = 0; i < 16; ++ i) {
@@ -37,20 +40,15 @@ function fakeAnswer(connHost, connPort, connFingerprint) {
 	sdp += `c=IN IP4 ${connHost}\r\n`
 	sdp += `a=candidate:0 1 UDP 99999999 ${connHost} ${connPort} typ host\r\n`
 	sdp += `a=sendrecv\r\na=end-of-candidates\r\n`
-	icePwd = randomBase64String(22);
 	sdp += `a=ice-pwd:${icePwd}\r\n`
-	iceUfrag = randomBase64String(4);
-	sdp += `a=ice-ufrag:${iceUfrag}\r\n`
+	sdp += `a=ice-ufrag:${icePwd}\r\n`
 	sdp += `a=mid:0\r\na=setup:active\r\na=sctp-port:5000\r\na=max-message-size:262144\r\n`
 
 	console.log(sdp);
 
 	return {
-		answer: {
-			type: "answer",
-			sdp
-		},
-		iceUfrag,
+		type: "answer",
+		sdp
 	};
 }
 
@@ -60,6 +58,24 @@ function fakeCandidate(connHost, connPort, iceUfrag) {
 		sdpMLineIndex: 0,
 		usernameFragment: iceUfrag
 	};
+}
+
+/*
+ * Extract ICE password to send it to desktop endpoint
+ */
+function extractIcePwdFromSdp(sdp) {
+	const attrIcePwd = "a=ice-pwd:";
+	let lines = sdp.split("\n");
+	var result = null;
+	for (const line of lines) {
+		if (line.startsWith(attrIcePwd)) {
+			if (result) {
+				return null;
+			}
+			result = line.substring(attrIcePwd.length).trim();
+		}
+	}
+	return result;
 }
 
 function connect(connHost, connPort, connFingerprint) {
@@ -74,22 +90,28 @@ function connect(connHost, connPort, connFingerprint) {
 		log("Created offer");
 		conn.setLocalDescription(offer).then(function(_) {
 			log("Set offer");
-			let answer = fakeAnswer(connHost, connPort, connFingerprint);
-			conn.setRemoteDescription(answer.answer).then(function(_) {
-				log("Set fake answer");
-				conn.addIceCandidate(fakeCandidate(connHost, connPort, answer.iceUfrag)).then(function(_) {
-					log("Set fake candidate");
-					conn.addIceCandidate().then(function(_) {
-						log("Set fake end of candidates");
+			let icePwd = extractIcePwdFromSdp(offer.sdp);
+			if (icePwd) {
+				log(`Extracted ICE password: ${icePwd}`);
+				let answer = fakeAnswer(connHost, connPort, connFingerprint, icePwd);
+				conn.setRemoteDescription(answer).then(function(_) {
+					log("Set fake answer");
+					conn.addIceCandidate(fakeCandidate(connHost, connPort, icePwd)).then(function(_) {
+						log("Set fake candidate");
+						conn.addIceCandidate().then(function(_) {
+							log("Set fake end of candidates");
+						}).catch(function(reason) {
+							logErr(`Cannot add fake end of candidate: ${reason}`);
+						});
 					}).catch(function(reason) {
-						logErr(`Cannot add fake end of candidate: ${reason}`);
+						logErr(`Cannot add fake candidate: ${reason}`);
 					});
 				}).catch(function(reason) {
-					logErr(`Cannot add fake candidate: ${reason}`);
+					logErr(`Cannot set answer: ${reason}`);
 				});
-			}).catch(function(reason) {
-				logErr(`Cannot set answer: ${reason}`);
-			});
+			} else {
+				logErr("Cannot detect ICE password");
+			}
 		}).catch(function(reason) {
 			logErr(`Cannot set offer: ${reason}`);
 		});
