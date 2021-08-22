@@ -24,7 +24,8 @@ function randomBase64String(length) {
 }
 
 /*
- * Uses ICE password from offer so desktop endpoint could use it for ICE STUN confirmation
+ * Uses ICE password from offer so desktop endpoint could use it for ICE STUN confirmation.
+ * It doesn't use ICE username fragment because short username fragments cannot be used as passwords.
  */
 function fakeAnswer(connHost, connPort, connFingerprint, icePwd) {
 	let sdp = "v=0\r\n";
@@ -137,7 +138,7 @@ function connToHost() {
 			logErr(`Connection error: ${reason}`);
 		}
 	} else {
-		logErr("Incorrect host and port");
+		logErr(`Incorrect host ${connHost} and port ${connPort}`);
 	}
 	return false;
 }
